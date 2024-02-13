@@ -8,8 +8,11 @@ import { IFileItem } from "./ItemList";
 import { IconMapper } from "./IconMapper";
 import { Email, SharePointDocument, ActivityMimeAttachment } from "./Entity";
 import { TIMEOUT } from "dns";
+import { isNullOrUndefined } from "util";
 
 export class AttachmentManager implements ComponentFramework.StandardControl<IInputs, IOutputs> {
+
+	public static IsLoading: boolean;
 
 	private container: HTMLDivElement;
 	private context: ComponentFramework.Context<IInputs>;
@@ -128,6 +131,8 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 			props.files.push(file);
 		}
 
+		AttachmentManager.IsLoading = false;
+
 		ReactDOM.render(
 			React.createElement(AttachmentManagerApp, props)
 			, this.container
@@ -137,6 +142,9 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 	private renderControlWithMockData(): void {
 		console.log("renderControl");
 		let props: IAttachmentProps = {} as IAttachmentProps;
+		
+		AttachmentManager.IsLoading = false;
+
 		ReactDOM.render(
 			React.createElement(AttachmentManagerApp, props)
 			, this.container
@@ -154,6 +162,7 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 	public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container: HTMLDivElement) {
 		this.context = context;
 		this.container = container;
+		AttachmentManager.IsLoading = true;
 		this.notifyOutputChanged = notifyOutputChanged;
 
 		this.primaryEntity = new PrimaryEntity(this.context);
@@ -218,8 +227,6 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 				}
 			)
 	
-			//await Promise.all([sharePointDocPromise, emailDocPromise]);
-	
 			console.log("All promises resolved");
 			console.log(`No. of documents in total ${aggregatedFiles.length}`);
 			console.log(`No. of emails in total ${aggregatedEmails.length}`);
@@ -236,94 +243,6 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 			}
 		}
 	}
-
-	/**
-	 * Called when any value in the property bag has changed. This includes field values, data-sets, global values such as container height and width, offline status, control metadata values such as label, visible, etc.
-	 * @param context The entire property bag available to control via Context Object; It contains values as set up by the customizer mapped to names defined in the manifest, as well as utility functions
-	 
-	public updateView(context: ComponentFramework.Context<IInputs>): void {
-		this.context = context;
-
-		this.primaryEntity = new PrimaryEntity(this.context);
-
-		
-
-		if (isInHarness()) {
-			this.renderControlWithMockData();
-		} else {
-			let aggregatedFiles:ComponentFramework.WebApi.Entity[] = [];
-			let aggregatedEmails:ComponentFramework.WebApi.Entity[] = [];
-			let isFileFromEmailArray: boolean[] = [];
-
-			//Get SharePoint Document from "Regarding" (in our case it's incident/case)
-			const sharePointDocPromise = Email.getById(this.primaryEntity.Entity.id, this.context).then(
-				(e) => {
-					if(!e) return;
-					const regarding: EntityReference = EntityReference.get(e, Email.RegardingObject)
-
-					SharePointDocument.getByRegarding(regarding.id, regarding.typeName, this.context).then(
-						(ec) => {
-							console.log(`No. of documents in SP ${ec.length}`);
-							
-							if(ec.length > 0) {
-								aggregatedFiles = [...aggregatedFiles, ...ec];
-
-								ec.forEach(element => {
-									isFileFromEmailArray.push(false);
-								});
-							}
-						}
-					);
-				}
-			)
-
-			//Get All Emails
-			const emailDocPromise = Email.getAllEmails(this.context, this.primaryEntity.Entity.id).then(
-				(emails) => {
-					console.log(`No. of emails ${emails.entities.length}`);
-					
-					const promises = emails.entities.map(e => {
-						return SharePointDocument.getByEmailRegarding(e["activityid"], this.context).then(
-							(ec) => {
-								console.log(`No. of documents in E-Mails ${ec.length}`);
-								if(ec.length > 0) {
-									aggregatedFiles = [...aggregatedFiles, ...ec];
-									aggregatedEmails = [...aggregatedEmails, e];
-
-									ec.forEach(element => {
-										isFileFromEmailArray.push(true);
-									});
-								}
-							}
-						)
-					});
-					Promise.all(promises).then(() => {});
-
-					/*
-					Promise.all(promises).then(() => {
-						console.log(`No. of documents in total ${aggregatedFiles.length}`);
-
-						if(aggregatedFiles.length > 0) {
-							this.renderControl(aggregatedFiles, aggregatedEmails, isFileFromEmailArray);
-						}
-					});
-					
-				}
-			)
-
-			Promise.all([sharePointDocPromise, emailDocPromise]).then(() => {
-				console.log("All promises resolved");
-				console.log(`No. of documents in total ${aggregatedFiles.length}`);
-				console.log(`No. of emails in total ${aggregatedEmails.length}`);
-				console.log(`No. of isFileFromEmailArray in total ${isFileFromEmailArray.length}`);
-
-				if(aggregatedFiles.length > 0) {
-					this.renderControl(aggregatedFiles, aggregatedEmails, isFileFromEmailArray);
-				}
-			});
-		}
-	}
-	*/
 
 	/** 
 	 * It is called by the framework prior to a control receiving new data. 

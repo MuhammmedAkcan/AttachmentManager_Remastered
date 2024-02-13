@@ -27,6 +27,29 @@ export class ItemList {
         this.items = [];
 
         this.setColumns();
+        this.setMinimalColumns();
+    }
+
+    private setMinimalColumns(): void{
+        let minColumns: IColumn[] = [];
+        minColumns.push({
+            key: 'iconclassname',
+            name: '',
+            fieldName: 'iconclassname',
+            minWidth: 20,
+            maxWidth: 40,
+            isResizable: false
+        });
+        minColumns.push({
+            key: 'fileName',
+            name: 'Document',
+            fieldName: 'fileName',
+            minWidth: 100,
+            maxWidth: 200,
+            isResizable: true
+        });
+        
+        this.columns = minColumns;
     }
 
     private setColumns(): void {
@@ -129,9 +152,14 @@ export class ItemList {
         return this.columns;
     }
 
+    public getMinimalColumns(): IColumn[] {
+        return this.columns;
+    }
+
     public getItems(): IFileItem[] {
         return this.items;
     }
+
 
     public setItems(items: IFileItem[]): void {
         if (items)

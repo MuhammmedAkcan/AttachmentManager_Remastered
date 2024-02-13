@@ -19,19 +19,24 @@ import { MarqueeSelection } from 'office-ui-fabric-react/lib/MarqueeSelection';
 import { Dialog, DialogType } from 'office-ui-fabric-react/lib/Dialog';
 import { IFileItem, ItemList } from './ItemList';
 import { classNames } from './ComponentStyles';
+import { Spinner, SpinnerSize } from 'office-ui-fabric-react/lib/Spinner';
+import { AttachmentManager } from '.';
 
 export interface IAttachmentProps {
     regardingObjectId: string;
     regardingEntityName: string;
     files: IFileItem[];
     onAttach: (selectedFiles: IFileItem[]) => Promise<void>;
+    isControlLoading: boolean;
 }
 
 export interface IAttachmentState {
     files: IFileItem[];
     columns: IColumn[];
+    minimalColumns: IColumn[];
     hiddenModal: boolean;
     isInProgress: boolean;
+    isLoading: boolean;
 }
 
 export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAttachmentState> {
@@ -52,9 +57,11 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
         
         this.state = {
             files: this.allFiles.getItems(),
-            hiddenModal: true,
+            hiddenModal: false,
             isInProgress: false,
-            columns: this.allFiles.getColumns()
+            columns: this.allFiles.getColumns(),
+            minimalColumns: this.allFiles.getMinimalColumns(),
+            isLoading: true
         };
 
         this.attachFilesClicked = this.attachFilesClicked.bind(this);
@@ -63,26 +70,13 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
         this.hideDialog = this.hideDialog.bind(this);
     }
 
-    public render(): React.JSX.Element {
-        const { hiddenModal: hiddenDialog, files, columns } = this.state;
+    public render(): React.JSX.Element { 
+        const { hiddenModal: hiddenDialog, files, columns, minimalColumns, isLoading } = this.state;
         return (
             <div>
-                <CommandBar
-                    items={this.getItems()}
-                />
-                <Dialog
-                    hidden={hiddenDialog}
-                    onDismiss={() => { this.setState({ hiddenModal: true }) }}
-                    dialogContentProps={{
-                        type: DialogType.normal,
-                        title: 'Attach files',
-                        subText: 'Choose files you want to attach to the email'
-                    }}
-                    modalProps={{
-                        isBlocking: false,
-                    }}
-                    minWidth='900px'
-                >
+                {AttachmentManager.IsLoading ? (
+                <Spinner size={SpinnerSize.large} label="Loading..." ariaLive="assertive" labelPosition="right" />
+                ) : (
                     <div className={classNames.wrapper}>
                         <ScrollablePane scrollbarVisibility={ScrollbarVisibility.auto}>
                             <Sticky stickyPosition={StickyPositionType.Header}>
@@ -101,9 +95,9 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
                             <MarqueeSelection selection={this.selection}>
                                 <DetailsList
                                     items={files}
-                                    columns={columns}
+                                    columns={minimalColumns}
                                     setKey="set"
-                                    layoutMode={DetailsListLayoutMode.fixedColumns}
+                                    layoutMode={DetailsListLayoutMode.justified}
                                     constrainMode={ConstrainMode.unconstrained}
                                     onRenderItemColumn={renderItemColumn}
                                     onRenderDetailsHeader={onRenderDetailsHeader}
@@ -116,10 +110,13 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
                             </MarqueeSelection>
                         </ScrollablePane>
                     </div>
-                </Dialog>
+                )}
             </div>
         );
     }
+    
+
+    
 
     private getItems = () => {
         return [
@@ -190,7 +187,7 @@ function renderItemColumn(item: IFileItem, index?: number, column?: IColumn) {
     if (column) {
         const fieldContent = item[column.fieldName as keyof IFileItem] as string;
 
-        console.log('Rendering column: ' + column.key + ' with content: ' + fieldContent);
+        //console.log('Rendering column: ' + column.key + ' with content: ' + fieldContent);
 
         switch (column.key) {
             case 'iconclassname':
@@ -199,10 +196,24 @@ function renderItemColumn(item: IFileItem, index?: number, column?: IColumn) {
             case 'sharepointcreatedon':
             case 'lastModifiedOn': {
                 const dateField = item[column.fieldName as keyof IFileItem] as Date;
-                return <div>{dateField.toLocaleDateString('en-nz')} {dateField.toLocaleTimeString('en-nz')}</div>;
+                //return <div>{dateField.toLocaleDateString('de-de')} {dateField.toLocaleTimeString('de-de')}</div>;
+                const options = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } as Intl.DateTimeFormatOptions;
+                const formatter = new Intl.DateTimeFormat('de-DE', options);
+                return <div>{formatter.format(dateField)}</div>;
+            }
+            case 'fileName':{
+                const dateField = item["lastModifiedOn" as keyof IFileItem] as Date;
+                //return <div>{dateField.toLocaleDateString('de-de')} {dateField.toLocaleTimeString('de-de')}</div>;
+                const options = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } as Intl.DateTimeFormatOptions;
+                const formatter = new Intl.DateTimeFormat('de-DE', options);
+
+                if(item["subject" as keyof IFileItem] as string != "---"){
+                    return <div><b>{fieldContent}</b><div>{formatter.format(dateField)} - {item["subject" as keyof IFileItem] as string}</div></div>
+                } else {
+                    return <div><b>{fieldContent}</b><div>{formatter.format(dateField)}</div></div>
+                }
             }
             case 'fileType':
-            case 'fileName':
             case 'lastModifiedBy':
             case 'subject':
             case 'version':
