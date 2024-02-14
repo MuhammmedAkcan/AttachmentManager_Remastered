@@ -12,10 +12,10 @@ export const ActivityMimeAttachment = {
         attachment["objecttypecode"] = regarding.typeName;
         attachment["filename"] = name;
 
-		console.log("Regarding ID of Mime" + regarding.id);
-		console.log("Regarding Type of Mime" + regarding.typeName);
-		console.log("Attachment: " + name);
-		console.log("Content: " + content);
+		// console.log("Regarding ID of Mime" + regarding.id);
+		// console.log("Regarding Type of Mime" + regarding.typeName);
+		// console.log("Attachment: " + name);
+		// console.log("Content: " + content);
 
         await context.webAPI.createRecord(ActivityMimeAttachment.EntityName, attachment);
     }
@@ -50,10 +50,8 @@ export const Email = {
 
 	/* Das könnte gehen! */
 	getAllEmails: async(context: ComponentFramework.Context<IInputs>, id:string) => {
-		const fetchXml: string = (Email.FetchXML as string).replace("{0}", id);
-		console.log("TEST FETCH: " + fetchXml);
-		const emails = await context.webAPI.retrieveMultipleRecords(Email.EntityName, FetchXML.prepareOptions(fetchXml))
-		console.log("Email Count: " + emails.entities.length);
+		const fetchXml: string = Email.FetchXML.replace("{0}", id);
+		const emails = await context.webAPI.retrieveMultipleRecords(Email.EntityName, FetchXML.prepareOptions(fetchXml));
 		return emails;
 	}
 }
@@ -131,18 +129,13 @@ export const SharePointDocument = {
 
         getByRegarding: async(id: string, entityName: string, context: ComponentFramework.Context<IInputs>) => {
             const fetchXml: string = (SharePointDocument.FetchXml as string).split("{entityName}").join(entityName).split("{entityNameID}").join(entityName).split("{id}").join(id);
-			//console.log("fetchXml: " + fetchXml);
 
             const documents = await context.webAPI.retrieveMultipleRecords(SharePointDocument.EntityName, FetchXML.prepareOptions(fetchXml));
-			documents.entities.forEach(doc => {
-				console.log(doc);
-			});
             return documents.entities;
         },
 
 		getByEmailRegarding: async(id: string, context: ComponentFramework.Context<IInputs>) => {
 			const fetchXml: string = (SharePointDocument.FetchXml as string).split("{entityName}").join("email").split("{entityNameID}").join("activity").split("{id}").join(id);
-			//console.log("fetchXml: " + fetchXml);
 
             const documents = await context.webAPI.retrieveMultipleRecords(SharePointDocument.EntityName, FetchXML.prepareOptions(fetchXml));
             return documents.entities;

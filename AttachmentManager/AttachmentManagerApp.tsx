@@ -68,13 +68,14 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
         this.onFilterChanged = this.onFilterChanged.bind(this);
         this.onAttachClicked = this.onAttachClicked.bind(this);
         this.hideDialog = this.hideDialog.bind(this);
+        this.resetProgress = this.resetProgress.bind(this);
     }
 
     public render(): React.JSX.Element { 
         const { hiddenModal: hiddenDialog, files, columns, minimalColumns, isLoading } = this.state;
         return (
             <div>
-                {AttachmentManager.IsLoading ? (
+                {files.length == 0 ? (
                 <Spinner size={SpinnerSize.large} label="Loading..." ariaLive="assertive" labelPosition="right" />
                 ) : (
                     <div className={classNames.wrapper}>
@@ -139,7 +140,12 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
 
     private onAttachClicked(): void {
         this.setState({isInProgress : true});
-        this.props.onAttach(this.getSelectedFiles()).then(this.hideDialog);
+        this.props.onAttach(this.getSelectedFiles()).then(this.resetProgress);
+    }
+
+    private resetProgress(): void {
+        console.log('Resetting progress');
+        this.setState({isInProgress : false});
     }
 
     private hideDialog(): void {

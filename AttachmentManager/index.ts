@@ -41,11 +41,11 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 		let apiUrl: string;
 		for (let i = 0; i < selectedFiles.length; i++) {
 			const fileUrl = selectedFiles[i].fileUrl;
-			console.log(fileUrl);
+			// console.log(fileUrl);
 
 			apiUrl = this.spHelper.makeApiUrl(fileUrl);
 
-			console.log(apiUrl);
+			// console.log(apiUrl);
 
 			const data = await http(apiUrl);
 
@@ -72,22 +72,30 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 		
 	}
 
-	private renderControl(ec: ComponentFramework.WebApi.Entity[], ecEmails: ComponentFramework.WebApi.Entity[], isFileFromEmailArray: boolean[]): void {
+	private renderControl(ec: ComponentFramework.WebApi.Entity[], ecEmails: ComponentFramework.WebApi.Entity[], isFileFromEmailArray: boolean[], initial?:boolean): void {
 		console.log("renderControl");
 
+		
 
 		let props: IAttachmentProps = {} as IAttachmentProps;
 		props.files = [];
 		props.onAttach = this.onAttach.bind(this);
 
+		if(initial) {
+			console.log("Initial loading");
+			
+		}
+
+
+
 		let emailIndex = 0;
 
 		for (let i = 0; i < ec.length; i++) {
-			console.log(ec[i]);
+			// console.log(ec[i]);
 
 			let file:IFileItem;
 			if(!isFileFromEmailArray[i]) {
-				console.log("Email not found");
+				// console.log("Email not found");
 
 				file = {
 					key: i,
@@ -104,8 +112,8 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 					directioncode: false
 				};
 			} else {
-				console.log("Email found");
-				console.log(ecEmails[emailIndex]);
+				// console.log("Email found");
+				// console.log(ecEmails[emailIndex]);
 
 				file = {
 					key: i,
@@ -122,8 +130,8 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 					directioncode: ecEmails[emailIndex][Email.Directioncode]
 				};
 
-				console.log("ACHTUNG");
-				console.log(file);
+				// console.log("ACHTUNG");
+				// console.log(file);
 
 				//emailIndex++; this needs fixing!!!
 			}
@@ -140,7 +148,7 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 	}
 
 	private renderControlWithMockData(): void {
-		console.log("renderControl");
+		// console.log("renderControl");
 		let props: IAttachmentProps = {} as IAttachmentProps;
 		
 		AttachmentManager.IsLoading = false;
@@ -176,72 +184,64 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 	public async updateView(context: ComponentFramework.Context<IInputs>): Promise<void> {
 		this.context = context;
 		this.primaryEntity = new PrimaryEntity(this.context);
-	
+		
+
 		if (isInHarness()) {
 			this.renderControlWithMockData();
-		} else {
-			let aggregatedFiles: ComponentFramework.WebApi.Entity[] = [];
-			let aggregatedEmails: ComponentFramework.WebApi.Entity[] = [];
-			let isFileFromEmailArray: boolean[] = [];
-			let regardingEntity: ComponentFramework.WebApi.Entity = {} as ComponentFramework.WebApi.Entity;
-
-			console.log("Getting Regarding");
-			await Email.getById(this.primaryEntity.Entity.id, this.context).then(
-				async (e) => {
-					if (!e) return;
-					const regarding: EntityReference = EntityReference.get(e, Email.RegardingObject)
-					regardingEntity = regarding;
-	
-					const ec = await SharePointDocument.getByRegarding(regarding.id, regarding.typeName, this.context);
-					console.log(`No. of documents in Regarding ${ec.length}`);
-	
-					if (ec.length > 0) {
-						aggregatedFiles = [...aggregatedFiles, ...ec];
-						ec.forEach(() => {
-							isFileFromEmailArray.push(false);
-						});
-					}
-				}
-			)
-	
-			console.log("Getting Emails");
-			await Email.getAllEmails(this.context, regardingEntity.id).then(
-				async (emails) => {
-					console.log(`No. of emails ${emails.entities.length}`);
-	
-					const promises = emails.entities.map(e =>
-						SharePointDocument.getByEmailRegarding(e["activityid"], this.context).then(
-							(ec) => {
-								console.log(`No. of documents in E-Mail ${ec.length}`);
-								if (ec.length > 0) {
-									aggregatedFiles = [...aggregatedFiles, ...ec];
-									aggregatedEmails = [...aggregatedEmails, e];
-									ec.forEach(() => {
-										isFileFromEmailArray.push(true);
-									});
-								}
-							}
-						)
-					);
-					await Promise.all(promises);
-				}
-			)
-	
-			console.log("All promises resolved");
-			console.log(`No. of documents in total ${aggregatedFiles.length}`);
-			console.log(`No. of emails in total ${aggregatedEmails.length}`);
-			console.log(`No. of isFileFromEmailArray in total ${isFileFromEmailArray.length}`);
-
-			if(isFileFromEmailArray.length == aggregatedFiles.length - aggregatedEmails.length) {
-				console.log("isFileFromEmailArray is correct");
-			} else {
-				console.log("isFileFromEmailArray is not correct");
-			}
-	
-			if (aggregatedFiles.length > 0) {
-				this.renderControl(aggregatedFiles, aggregatedEmails, isFileFromEmailArray);
-			}
+			return;
 		}
+		
+		let aggregatedFiles: ComponentFramework.WebApi.Entity[] = [];
+		let aggregatedEmails: ComponentFramework.WebApi.Entity[] = [];
+		let isFileFromEmailArray: boolean[] = [];
+		let regardingEntity: ComponentFramework.WebApi.Entity = {} as ComponentFramework.WebApi.Entity;
+
+		// console.log("Getting Regarding");
+		const e = await Email.getById(this.primaryEntity.Entity.id, this.context);
+    	if (e) {
+			const regarding: EntityReference = EntityReference.get(e, Email.RegardingObject)
+			regardingEntity = regarding;
+
+			const [ec, emails] = await Promise.all([
+				SharePointDocument.getByRegarding(regarding.id, regarding.typeName, this.context),
+				Email.getAllEmails(this.context, regardingEntity.id)
+			]);
+
+			if (ec.length > 0) {
+				aggregatedFiles = [...aggregatedFiles, ...ec];
+				ec.forEach(() => {
+					isFileFromEmailArray.push(false);
+				});
+			}
+
+			const promises = emails.entities.map(async e => {
+				const ec = await SharePointDocument.getByEmailRegarding(e["activityid"], this.context);
+				if (ec.length > 0) {
+					aggregatedFiles = [...aggregatedFiles, ...ec];
+					aggregatedEmails = [...aggregatedEmails, e];
+					ec.forEach(() => {
+						isFileFromEmailArray.push(true);
+					});
+				}
+			});
+			await Promise.all(promises);
+		}
+
+		// console.log("All promises resolved");
+		// console.log(`No. of documents in total ${aggregatedFiles.length}`);
+		// console.log(`No. of emails in total ${aggregatedEmails.length}`);
+		// console.log(`No. of isFileFromEmailArray in total ${isFileFromEmailArray.length}`);
+
+		// if(isFileFromEmailArray.length == aggregatedFiles.length - aggregatedEmails.length) {
+		// 	console.log("isFileFromEmailArray is correct");
+		// } else {
+		// 	console.log("isFileFromEmailArray is not correct");
+		// }
+
+		if (aggregatedFiles.length > 0) {
+			this.renderControl(aggregatedFiles, aggregatedEmails, isFileFromEmailArray);
+		}
+		
 	}
 
 	/** 
