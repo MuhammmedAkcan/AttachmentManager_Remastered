@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { DefaultButton, Stack, ProgressIndicator, Icon } from 'office-ui-fabric-react';
+import { DefaultButton, Stack, ProgressIndicator, Icon, ShimmeredDetailsList, Shimmer } from 'office-ui-fabric-react';
 import { initializeIcons } from 'office-ui-fabric-react/lib/Icons';
 import { SearchBox } from 'office-ui-fabric-react/lib/SearchBox';
 import { CommandBar } from 'office-ui-fabric-react/lib/CommandBar';
@@ -27,7 +27,6 @@ export interface IAttachmentProps {
     regardingEntityName: string;
     files: IFileItem[];
     onAttach: (selectedFiles: IFileItem[]) => Promise<void>;
-    isControlLoading: boolean;
 }
 
 export interface IAttachmentState {
@@ -36,7 +35,6 @@ export interface IAttachmentState {
     minimalColumns: IColumn[];
     hiddenModal: boolean;
     isInProgress: boolean;
-    isLoading: boolean;
 }
 
 export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAttachmentState> {
@@ -60,8 +58,7 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
             hiddenModal: false,
             isInProgress: false,
             columns: this.allFiles.getColumns(),
-            minimalColumns: this.allFiles.getMinimalColumns(),
-            isLoading: true
+            minimalColumns: this.allFiles.getMinimalColumns()
         };
 
         this.attachFilesClicked = this.attachFilesClicked.bind(this);
@@ -72,46 +69,43 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
     }
 
     public render(): React.JSX.Element { 
-        const { hiddenModal: hiddenDialog, files, columns, minimalColumns, isLoading } = this.state;
+        const { hiddenModal: hiddenDialog, files, columns, minimalColumns } = this.state;
         return (
             <div>
-                {files.length == 0 ? (
-                <Spinner size={SpinnerSize.large} label="Loading..." ariaLive="assertive" labelPosition="right" />
-                ) : (
-                    <div className={classNames.wrapper}>
-                        <ScrollablePane scrollbarVisibility={ScrollbarVisibility.auto}>
-                            <Sticky stickyPosition={StickyPositionType.Header}>
-                                <Stack horizontal tokens={{childrenGap: 20, padding:10}}>
-                                    <Stack.Item>
-                                        <DefaultButton text="Attach" onClick={this.onAttachClicked} />
-                                    </Stack.Item>
-                                    <Stack.Item grow align="stretch">
-                                        <SearchBox styles={{ root: { width: '100%' } }} placeholder="Search file" onChange={this.onFilterChanged} />
-                                    </Stack.Item>
-                                </Stack>
-                                <Stack>
-                                    { this.state.isInProgress && <ProgressIndicator label="In progress" description="Copying files from SharePoint to an email" /> }
-                                </Stack>
-                            </Sticky>
-                            <MarqueeSelection selection={this.selection}>
-                                <DetailsList
-                                    items={files}
-                                    columns={minimalColumns}
-                                    setKey="set"
-                                    layoutMode={DetailsListLayoutMode.justified}
-                                    constrainMode={ConstrainMode.unconstrained}
-                                    onRenderItemColumn={renderItemColumn}
-                                    onRenderDetailsHeader={onRenderDetailsHeader}
-                                    selection={this.selection}
-                                    selectionPreservedOnEmptyClick={true}
-                                    ariaLabelForSelectionColumn="Toggle selection"
-                                    ariaLabelForSelectAllCheckbox="Toggle selection for all items"
-                                    onItemInvoked={this.onItemInvoked}
-                                />
-                            </MarqueeSelection>
-                        </ScrollablePane>
-                    </div>
-                )}
+                <div className={classNames.wrapper}>
+                    <ScrollablePane scrollbarVisibility={ScrollbarVisibility.auto}>
+                        <Sticky stickyPosition={StickyPositionType.Header}>
+                            <Stack horizontal tokens={{childrenGap: 20, padding:10}}>
+                                <Stack.Item>
+                                    <DefaultButton text="Attach" onClick={this.onAttachClicked} />
+                                </Stack.Item>
+                                <Stack.Item grow align="stretch">
+                                    <SearchBox styles={{ root: { width: '100%' } }} placeholder="Search file" onChange={this.onFilterChanged} />
+                                </Stack.Item>
+                            </Stack>
+                            <Stack>
+                                { this.state.isInProgress && <ProgressIndicator label="In progress" description="Copying files from SharePoint to an email" /> }
+                            </Stack>
+                        </Sticky>
+                        <MarqueeSelection selection={this.selection}>
+                            <DetailsList
+                                items={files}
+                                columns={minimalColumns}
+                                setKey="set"
+                                layoutMode={DetailsListLayoutMode.justified}
+                                constrainMode={ConstrainMode.unconstrained}
+                                onRenderItemColumn={renderItemColumn}
+                                onRenderDetailsHeader={onRenderDetailsHeader}
+                                selection={this.selection}
+                                selectionPreservedOnEmptyClick={true}
+                                ariaLabelForSelectionColumn="Toggle selection"
+                                ariaLabelForSelectAllCheckbox="Toggle selection for all items"
+                                onItemInvoked={this.onItemInvoked}
+                            />
+                        </MarqueeSelection>
+                    </ScrollablePane>
+                </div>
+            
             </div>
         );
     }
@@ -146,6 +140,7 @@ export class AttachmentManagerApp extends React.Component<IAttachmentProps, IAtt
     private resetProgress(): void {
         console.log('Resetting progress');
         this.setState({isInProgress : false});
+        this.selection.setAllSelected(false);
     }
 
     private hideDialog(): void {

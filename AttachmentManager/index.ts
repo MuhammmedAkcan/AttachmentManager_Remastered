@@ -9,10 +9,9 @@ import { IconMapper } from "./IconMapper";
 import { Email, SharePointDocument, ActivityMimeAttachment } from "./Entity";
 import { TIMEOUT } from "dns";
 import { isNullOrUndefined } from "util";
+import { PreLoadManager } from "./PreLoadManager";
 
 export class AttachmentManager implements ComponentFramework.StandardControl<IInputs, IOutputs> {
-
-	public static IsLoading: boolean;
 
 	private container: HTMLDivElement;
 	private context: ComponentFramework.Context<IInputs>;
@@ -53,6 +52,10 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 			this.primaryEntity.Entity, fileUrl.substr(fileUrl.lastIndexOf('/')), this.context);
 		}
 
+		this.regardingId = new Date().toTimeString();
+
+		this.notifyOutputChanged();
+
 		//email|NoRelationship|Form|Mscrm.SavePrimary21-button
 		try {
 			let attachButton = document.getElementById("email|NoRelationship|Form|Mscrm.SavePrimary20-button");
@@ -66,81 +69,38 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 				console.log("attachButton not found");
 			}
 		} catch (error) {
-			//console.log(error);
-			
+			console.error(error);
 		}
 		
 	}
 
-	private renderControl(ec: ComponentFramework.WebApi.Entity[], ecEmails: ComponentFramework.WebApi.Entity[], isFileFromEmailArray: boolean[], initial?:boolean): void {
+	private renderControl(ec: ComponentFramework.WebApi.Entity[]): void {
 		console.log("renderControl");
-
-		
 
 		let props: IAttachmentProps = {} as IAttachmentProps;
 		props.files = [];
 		props.onAttach = this.onAttach.bind(this);
 
-		if(initial) {
-			console.log("Initial loading");
-			
-		}
-
-
-
-		let emailIndex = 0;
 
 		for (let i = 0; i < ec.length; i++) {
-			// console.log(ec[i]);
+			
 
-			let file:IFileItem;
-			if(!isFileFromEmailArray[i]) {
-				// console.log("Email not found");
-
-				file = {
-					key: i,
-					id: i.toString(),
-					fileName: ec[i][SharePointDocument.FullName],
-					fileUrl: ec[i][SharePointDocument.AbsoluteUrl],
-					fileType: ec[i][SharePointDocument.FileType],
-					iconclassname: this.iconMapper.getBySharePointIcon(ec[i][SharePointDocument.IconClassName]),
-					lastModifiedOn: new Date(ec[i][SharePointDocument.LastModifiedOn]),
-					lastModifiedBy: ec[i][SharePointDocument.LastModifiedBy],
-					sharepointcreatedon: new Date(ec[i][SharePointDocument.CreatedOn]),
-					version: ec[i][SharePointDocument.Version],
-					subject: "---",
-					directioncode: false
-				};
-			} else {
-				// console.log("Email found");
-				// console.log(ecEmails[emailIndex]);
-
-				file = {
-					key: i,
-					id: i.toString(),
-					fileName: ec[i][SharePointDocument.FullName],
-					fileUrl: ec[i][SharePointDocument.AbsoluteUrl],
-					fileType: ec[i][SharePointDocument.FileType],
-					iconclassname: this.iconMapper.getBySharePointIcon(ec[i][SharePointDocument.IconClassName]),
-					lastModifiedOn: new Date(ec[i][SharePointDocument.LastModifiedOn]),
-					lastModifiedBy: ec[i][SharePointDocument.LastModifiedBy],
-					sharepointcreatedon: new Date(ec[i][SharePointDocument.CreatedOn]),
-					version: ec[i][SharePointDocument.Version],
-					subject: ecEmails[emailIndex][Email.Subject],
-					directioncode: ecEmails[emailIndex][Email.Directioncode]
-				};
-
-				// console.log("ACHTUNG");
-				// console.log(file);
-
-				//emailIndex++; this needs fixing!!!
-			}
+			let file:IFileItem = {
+				key: i,
+				id: i.toString(),
+				fileName: ec[i][SharePointDocument.FullName],
+				fileUrl: ec[i][SharePointDocument.AbsoluteUrl],
+				fileType: ec[i][SharePointDocument.FileType],
+				iconclassname: this.iconMapper.getBySharePointIcon(ec[i][SharePointDocument.IconClassName]),
+				lastModifiedOn: new Date(ec[i][SharePointDocument.LastModifiedOn]),
+				lastModifiedBy: ec[i][SharePointDocument.LastModifiedBy],
+				sharepointcreatedon: new Date(ec[i][SharePointDocument.CreatedOn]),
+				version: ec[i][SharePointDocument.Version],
+			};
 
 			props.files.push(file);
-		}
-
-		AttachmentManager.IsLoading = false;
-
+		} 
+			
 		ReactDOM.render(
 			React.createElement(AttachmentManagerApp, props)
 			, this.container
@@ -148,10 +108,9 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 	}
 
 	private renderControlWithMockData(): void {
-		// console.log("renderControl");
+		console.log("renderControl");
 		let props: IAttachmentProps = {} as IAttachmentProps;
 		
-		AttachmentManager.IsLoading = false;
 
 		ReactDOM.render(
 			React.createElement(AttachmentManagerApp, props)
@@ -170,78 +129,53 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 	public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container: HTMLDivElement) {
 		this.context = context;
 		this.container = container;
-		AttachmentManager.IsLoading = true;
 		this.notifyOutputChanged = notifyOutputChanged;
 
 		this.primaryEntity = new PrimaryEntity(this.context);
 		this.iconMapper = new IconMapper();
 
 		this.spHelper = new SharePointHelper(this.context.parameters.SharePointSiteURLs.raw as string, this.context.parameters.FlowURL.raw as string);
+
+		console.log("init");
 	}
 
 
 
 	public async updateView(context: ComponentFramework.Context<IInputs>): Promise<void> {
+		console.log("updateView");
 		this.context = context;
 		this.primaryEntity = new PrimaryEntity(this.context);
-		
 
 		if (isInHarness()) {
 			this.renderControlWithMockData();
 			return;
 		}
+
+		//Create spinner
+		ReactDOM.render(
+			React.createElement(PreLoadManager, {} as IAttachmentProps)
+			, this.container
+		);
+
+		// ReactDOM.render(
+		// 	React.createElement(AttachmentManagerApp, props)
+		// 	, this.container
+		// );
 		
-		let aggregatedFiles: ComponentFramework.WebApi.Entity[] = [];
-		let aggregatedEmails: ComponentFramework.WebApi.Entity[] = [];
-		let isFileFromEmailArray: boolean[] = [];
-		let regardingEntity: ComponentFramework.WebApi.Entity = {} as ComponentFramework.WebApi.Entity;
+		Email.getById(this.primaryEntity.Entity.id, this.context).then(
+			(e) => {
+				const regarding: EntityReference = EntityReference.get(e, Email.RegardingObject)
 
-		// console.log("Getting Regarding");
-		const e = await Email.getById(this.primaryEntity.Entity.id, this.context);
-    	if (e) {
-			const regarding: EntityReference = EntityReference.get(e, Email.RegardingObject)
-			regardingEntity = regarding;
+				SharePointDocument.getByRegarding(regarding.id, regarding.typeName, this.context).then(
+					(ec) => {
+						console.log(`No. of documents in SP ${ec.length}`);
 
-			const [ec, emails] = await Promise.all([
-				SharePointDocument.getByRegarding(regarding.id, regarding.typeName, this.context),
-				Email.getAllEmails(this.context, regardingEntity.id)
-			]);
-
-			if (ec.length > 0) {
-				aggregatedFiles = [...aggregatedFiles, ...ec];
-				ec.forEach(() => {
-					isFileFromEmailArray.push(false);
-				});
+						this.renderControl(ec);
+					}
+				);
 			}
-
-			const promises = emails.entities.map(async e => {
-				const ec = await SharePointDocument.getByEmailRegarding(e["activityid"], this.context);
-				if (ec.length > 0) {
-					aggregatedFiles = [...aggregatedFiles, ...ec];
-					aggregatedEmails = [...aggregatedEmails, e];
-					ec.forEach(() => {
-						isFileFromEmailArray.push(true);
-					});
-				}
-			});
-			await Promise.all(promises);
-		}
-
-		// console.log("All promises resolved");
-		// console.log(`No. of documents in total ${aggregatedFiles.length}`);
-		// console.log(`No. of emails in total ${aggregatedEmails.length}`);
-		// console.log(`No. of isFileFromEmailArray in total ${isFileFromEmailArray.length}`);
-
-		// if(isFileFromEmailArray.length == aggregatedFiles.length - aggregatedEmails.length) {
-		// 	console.log("isFileFromEmailArray is correct");
-		// } else {
-		// 	console.log("isFileFromEmailArray is not correct");
-		// }
-
-		if (aggregatedFiles.length > 0) {
-			this.renderControl(aggregatedFiles, aggregatedEmails, isFileFromEmailArray);
-		}
-		
+		)
+		console.log("Done with UpdateView");		
 	}
 
 	/** 

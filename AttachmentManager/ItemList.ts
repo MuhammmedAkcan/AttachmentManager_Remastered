@@ -13,8 +13,6 @@ export interface IFileItem {
     lastModifiedBy: string;
     version: string;
     sharepointcreatedon: Date;
-    subject: string;
-    directioncode: boolean;
     iconclassname: string;
 }
 
@@ -110,22 +108,6 @@ export class ItemList {
             maxWidth: 200,
             isResizable: true
         });
-        this.columns.push({
-            key: 'subject',
-            name: 'Subject of Email',
-            fieldName: 'subject',
-            minWidth: 100,
-            maxWidth: 200,
-            isResizable: true
-        });
-        this.columns.push({
-            key: 'directioncode',
-            name: 'Direction',
-            fieldName: 'directioncode',
-            minWidth: 100,
-            maxWidth: 200,
-            isResizable: true
-        });
     }
 
     private addMockItems(): void {
@@ -142,8 +124,6 @@ export class ItemList {
                 lastModifiedBy: getLorem(4),
                 sharepointcreatedon: new Date(),
                 version: "1.0",
-                subject: getLorem(4),
-                directioncode: true
             });
         }
     }
