@@ -96,6 +96,7 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 				lastModifiedBy: ec[i][SharePointDocument.LastModifiedBy],
 				sharepointcreatedon: new Date(ec[i][SharePointDocument.CreatedOn]),
 				version: ec[i][SharePointDocument.Version],
+				fileSize: ec[i][SharePointDocument.Filesize]
 			};
 
 			props.files.push(file);

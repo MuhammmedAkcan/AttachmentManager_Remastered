@@ -14,6 +14,7 @@ export interface IFileItem {
     version: string;
     sharepointcreatedon: Date;
     iconclassname: string;
+    fileSize: string;
 }
 
 export class ItemList {
@@ -124,6 +125,7 @@ export class ItemList {
                 lastModifiedBy: getLorem(4),
                 sharepointcreatedon: new Date(),
                 version: "1.0",
+                fileSize: "1337 kB"
             });
         }
     }

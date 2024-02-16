@@ -204,15 +204,13 @@ function renderItemColumn(item: IFileItem, index?: number, column?: IColumn) {
             }
             case 'fileName':{
                 const dateField = item["lastModifiedOn" as keyof IFileItem] as Date;
+                const fileSize = item["fileSize" as keyof IFileItem] as string;
                 //return <div>{dateField.toLocaleDateString('de-de')} {dateField.toLocaleTimeString('de-de')}</div>;
                 const options = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } as Intl.DateTimeFormatOptions;
                 const formatter = new Intl.DateTimeFormat('de-DE', options);
 
-                if(item["subject" as keyof IFileItem] as string != "---"){
-                    return <div><b>{fieldContent}</b><div>{formatter.format(dateField)} - {item["subject" as keyof IFileItem] as string}</div></div>
-                } else {
-                    return <div><b>{fieldContent}</b><div>{formatter.format(dateField)}</div></div>
-                }
+                
+                return <div><b>{fieldContent}</b><div>{fileSize} - {formatter.format(dateField)}</div></div>
             }
             case 'fileType':
             case 'lastModifiedBy':
