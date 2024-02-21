@@ -11,6 +11,8 @@ import { TIMEOUT } from "dns";
 import { isNullOrUndefined } from "util";
 import { PreLoadManager } from "./PreLoadManager";
 
+
+
 export class AttachmentManager implements ComponentFramework.StandardControl<IInputs, IOutputs> {
 
 	private container: HTMLDivElement;
@@ -22,14 +24,13 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 
 	private iconMapper: IconMapper;
 	private spHelper: SharePointHelper;
-
 	
 
 	/**
 	 * Empty constructor.
 	 */
 	constructor() {
-
+		
 	}
 
 	private timeout(ms:number){
@@ -152,16 +153,17 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 			return;
 		}
 
+		let props: IAttachmentProps = {} as IAttachmentProps;
+		props.noFilesFound = false;
+		props.notSavedYet = false;
+
 		//Create spinner
 		ReactDOM.render(
-			React.createElement(PreLoadManager, {} as IAttachmentProps)
+			React.createElement(PreLoadManager, props)
 			, this.container
 		);
 
-		// ReactDOM.render(
-		// 	React.createElement(AttachmentManagerApp, props)
-		// 	, this.container
-		// );
+		
 		
 		Email.getById(this.primaryEntity.Entity.id, this.context).then(
 			(e) => {
@@ -172,11 +174,26 @@ export class AttachmentManager implements ComponentFramework.StandardControl<IIn
 						console.log(`No. of documents in SP ${ec.length}`);
 
 						this.renderControl(ec);
+
+						if(ec.length == 0) {
+							props.noFilesFound = true;
+							props.notSavedYet = false;
+							ReactDOM.render(
+								React.createElement(PreLoadManager, props)
+								, this.container
+							);
+						}
 					}
 				);
+				console.log("Done with UpdateView");
+				return;
 			}
 		)
-		console.log("Done with UpdateView");		
+			
+		props.notSavedYet = true;
+		ReactDOM.render(React.createElement(PreLoadManager, props), this.container);
+		console.log("Email not saved yet");
+
 	}
 
 	/** 

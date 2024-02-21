@@ -27,6 +27,8 @@ export interface IAttachmentProps {
     regardingEntityName: string;
     files: IFileItem[];
     onAttach: (selectedFiles: IFileItem[]) => Promise<void>;
+    noFilesFound: boolean;
+    notSavedYet: boolean;
 }
 
 export interface IAttachmentState {
@@ -204,13 +206,13 @@ function renderItemColumn(item: IFileItem, index?: number, column?: IColumn) {
             }
             case 'fileName':{
                 const dateField = item["lastModifiedOn" as keyof IFileItem] as Date;
-                const fileSize = item["fileSize" as keyof IFileItem] as string;
+                const fileSize = item["fileSize" as keyof IFileItem] as number;
                 //return <div>{dateField.toLocaleDateString('de-de')} {dateField.toLocaleTimeString('de-de')}</div>;
                 const options = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } as Intl.DateTimeFormatOptions;
                 const formatter = new Intl.DateTimeFormat('de-DE', options);
 
                 
-                return <div><b>{fieldContent}</b><div>{fileSize} - {formatter.format(dateField)}</div></div>
+                return <div><b>{fieldContent}</b><div>{bytesToKiloBytes(fileSize)} kB - {formatter.format(dateField)}</div></div>
             }
             case 'fileType':
             case 'lastModifiedBy':
@@ -224,6 +226,10 @@ function renderItemColumn(item: IFileItem, index?: number, column?: IColumn) {
                 break;
             }
         }
+    }
+
+    function bytesToKiloBytes(bytes: number): number {
+        return bytes / 1000;
     }
 
 
